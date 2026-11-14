@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flight_recorder/flight_recorder.dart';
+import 'package:flutter_flight_recorder/flutter_flight_recorder.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

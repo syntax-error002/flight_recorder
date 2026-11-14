@@ -1,6 +1,6 @@
 # Flight Recorder Showcase Example
 
-A complete e-commerce application demonstrating `flight_recorder` in action.
+A complete e-commerce application demonstrating `flutter_flight_recorder` in action.
 
 ## Features Demonstrated
 
@@ -30,7 +30,7 @@ flutter run
 4. Click **"Copy Dart Test"** or **"Export .flightlog"**.
 5. Run the CLI tool against the exported log:
    ```bash
-   dart run flight_recorder:synthesize -i my_session.flightlog -o test/repros/crash_test.dart
+   dart run flutter_flight_recorder:synthesize -i my_session.flightlog -o test/repros/crash_test.dart
    ```
 6. Run the generated test:
    ```bash

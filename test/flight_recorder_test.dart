@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flight_recorder/flight_recorder.dart';
+import 'package:flutter_flight_recorder/flutter_flight_recorder.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:args/args.dart';
-import 'package:flight_recorder/flight_recorder_core.dart';
+import 'package:flutter_flight_recorder/flutter_flight_recorder_core.dart';
 
 void main(List<String> arguments) async {
   final parser = ArgParser()
