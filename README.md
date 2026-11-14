@@ -1,4 +1,4 @@
-# flight_blackbox ✈️📦
+# flight_blackbox
 
 **Deterministic in-app event-sourcing ring buffer and crash-to-`testWidgets` synthesizer for Flutter.**
 
