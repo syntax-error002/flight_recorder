@@ -1,0 +1,28 @@
+name: flight_recorder
+description: Deterministic in-app event-sourcing ring buffer and crash-to-testWidgets synthesizer for Flutter applications.
+version: 0.1.0
+repository: https://github.com/syntax-error002/flight_recorder
+issue_tracker: https://github.com/syntax-error002/flight_recorder/issues
+topics:
+  - testing
+  - debugging
+  - crash-reporting
+  - developer-tools
+  - testwidgets
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  args: ^2.7.0
+  flutter:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+  path: ^1.9.1
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+
+flutter:
