@@ -89,6 +89,25 @@ class FlightSerializer {
     }
   }
 
+  /// Synchronously writes session to file (compressed by default).
+  static File writeToFileSync(
+    FlightSession session,
+    String filePath, {
+    bool compress = true,
+  }) {
+    final file = File(filePath);
+    file.parent.createSync(recursive: true);
+
+    if (compress) {
+      final bytes = toCompressedBytes(session);
+      file.writeAsBytesSync(bytes, flush: true);
+    } else {
+      final jsonString = toJsonString(session, pretty: true);
+      file.writeAsStringSync(jsonString, flush: true);
+    }
+    return file;
+  }
+
   /// Writes session to file (compressed by default).
   static Future<File> writeToFile(
     FlightSession session,
@@ -105,6 +124,13 @@ class FlightSerializer {
       final jsonString = toJsonString(session, pretty: true);
       return file.writeAsString(jsonString, flush: true);
     }
+  }
+
+  /// Synchronously reads session from file (automatically handles compressed or plain JSON).
+  static FlightSession readFromFileSync(String filePath) {
+    final file = File(filePath);
+    final bytes = file.readAsBytesSync();
+    return fromBytes(bytes);
   }
 
   /// Reads session from file (automatically handles compressed or plain JSON).

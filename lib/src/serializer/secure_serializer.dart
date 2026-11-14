@@ -124,6 +124,16 @@ class SecureFlightSerializer {
   // File I/O
   // -------------------------------------------------------------------------
 
+  /// Synchronously serialises [session], encrypts it, and writes the result to [filePath].
+  File writeEncryptedToFileSync(FlightSession session, String filePath) {
+    final String path = _enforceExtension(filePath, '.eflightlog');
+    final Uint8List bytes = toEncryptedBytes(session);
+    final File file = File(path);
+    file.parent.createSync(recursive: true);
+    file.writeAsBytesSync(bytes, flush: true);
+    return file;
+  }
+
   /// Serialises [session], encrypts it, and writes the result to [filePath].
   ///
   /// The file extension is normalised to `.eflightlog` automatically; a
@@ -138,6 +148,12 @@ class SecureFlightSerializer {
     await file.parent.create(recursive: true);
     await file.writeAsBytes(bytes, flush: true);
     return file;
+  }
+
+  /// Synchronously reads the file at [filePath], decrypts, and deserialises the [FlightSession].
+  FlightSession readEncryptedFromFileSync(String filePath) {
+    final Uint8List bytes = File(filePath).readAsBytesSync();
+    return fromEncryptedBytes(bytes);
   }
 
   /// Reads the file at [filePath], decrypts, and deserialises the

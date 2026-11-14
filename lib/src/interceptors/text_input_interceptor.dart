@@ -66,6 +66,12 @@ class _InterceptingBinaryMessenger extends BinaryMessenger {
     ByteData? data,
     PlatformMessageResponseCallback? callback,
   ) {
+    if (channel == _textInputChannel && data != null) {
+      try {
+        final call = const JSONMethodCodec().decodeMethodCall(data);
+        _spy._handleMethodCall(call, fromNative: true);
+      } catch (_) {}
+    }
     // ignore: deprecated_member_use
     return _delegate.handlePlatformMessage(channel, data, callback);
   }
@@ -383,54 +389,50 @@ class TextInputInterceptor {
       spy: spy,
     );
 
-    // Replace the global messenger.  Flutter's ServicesBinding exposes the
-    // defaultBinaryMessenger as a settable field via
-    // TestDefaultBinaryMessengerBinding in test mode and via
-    // ServicesBinding in production.  We use the same override mechanism
-    // that the framework itself uses for TestWidgetsFlutterBinding.
-    ServicesBinding.instance
-        // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
-        .defaultBinaryMessenger
-        // The cast is required because defaultBinaryMessenger is defined as a
-        // getter returning BinaryMessenger; we route around the lack of a
-        // public setter via the TestDefaultBinaryMessengerBinding mixin when
-        // present, or by using the ChannelBuffers override path otherwise.
-        // In production Flutter (non-test) the canonical approach is to use
-        // `WidgetsFlutterBinding.ensureInitialized()` and then patch the
-        // channel handler directly, which is what we do below.
-        ;
+    // Swap defaultBinaryMessenger in test mode if available
+    try {
+      (ServicesBinding.instance as dynamic).defaultBinaryMessenger =
+          _interceptingMessenger;
+    } catch (_) {}
 
-    // Because ServicesBinding.defaultBinaryMessenger has no public setter in
-    // production Flutter, we intercept at the channel-handler level instead:
-    // We re-register our intercepting handler on the channel itself so that
-    // platform → Dart messages are routed through our spy.  For Dart → platform
-    // messages we wrap `send()` by patching the channel's codec path.
-    //
-    // This matches the approach used by `flutter_test`'s
-    // TestDefaultBinaryMessengerBinding and is safe across Flutter versions.
-    _originalMessenger!.setMessageHandler(
-      'flutter/textinput',
-      (ByteData? bytes) async {
-        // Let the spy observe the inbound message and call through to whatever
-        // the framework had registered.
-        return spy._interceptHandler(bytes);
-      },
-    );
+    // In production / engine boundary, tap via ChannelBuffers so native platform
+    // keyboard messages are observed without clobbering existing handlers.
+    try {
+      ServicesBinding.instance.channelBuffers.setListener(
+        'flutter/textinput',
+        (ByteData? data, PlatformMessageResponseCallback callback) {
+          if (data != null) {
+            try {
+              final call = const JSONMethodCodec().decodeMethodCall(data);
+              spy._handleMethodCall(call, fromNative: true);
+            } catch (_) {}
+          }
+          // ignore: deprecated_member_use
+          _originalMessenger?.handlePlatformMessage(
+            'flutter/textinput',
+            data,
+            callback,
+          );
+        },
+      );
+    } catch (_) {}
 
     _attached = true;
   }
 
-  /// Restores the original message handler on the `flutter/textinput` channel.
+  /// Restores original message interceptors on the `flutter/textinput` channel.
   /// Safe to call multiple times – subsequent calls are no-ops.
   void detach() {
     if (!_attached) return;
 
-    // Restore the original handler (which may be null if the framework has not
-    // yet set one up, e.g. in early startup).
-    _originalMessenger?.setMessageHandler(
-      'flutter/textinput',
-      _interceptingMessenger?._spy.originalHandler,
-    );
+    try {
+      (ServicesBinding.instance as dynamic).defaultBinaryMessenger =
+          _originalMessenger;
+    } catch (_) {}
+
+    try {
+      ServicesBinding.instance.channelBuffers.clearListener('flutter/textinput');
+    } catch (_) {}
 
     _interceptingMessenger = null;
     _originalMessenger = null;

@@ -189,6 +189,16 @@ class SemanticResolver {
     'SelectableText',
     'TextField',
     'CupertinoTextField',
+    'Chip',
+    'ChoiceChip',
+    'FilterChip',
+    'ActionChip',
+    'InputChip',
+    'SegmentedButton',
+    'Tab',
+    'TabBar',
+    'NavigationDestination',
+    'NavigationRailDestination',
   };
 
   // ---------------------------------------------------------------------------
@@ -342,10 +352,40 @@ class SemanticResolver {
     final typeName = widget.runtimeType.toString();
 
     // --- Key ---
-    final String? keyStr = _extractKey(widget.key);
+    // 1. Direct key on target element
+    String? keyStr = _extractKey(widget.key);
+
+    // 2. If no direct clean key, walk ancestors up to 10 levels
+    // to discover any user-provided key on an enclosing composite widget
+    // (e.g. ChoiceChip, Card, Container, CustomWidget, etc.)
+    if (keyStr == null) {
+      int levels = 0;
+      element.visitAncestorElements((ancestor) {
+        if (++levels > 10) return false;
+        final ancestorKey = _extractKey(ancestor.widget.key);
+        if (ancestorKey != null) {
+          keyStr = ancestorKey;
+          return false; // found clean key, stop walking
+        }
+        return true; // continue up
+      });
+    }
 
     // --- Text content ---
-    final String? textContent = _findDescendantText(element);
+    String? textContent = _findDescendantText(element);
+    // If element has no descendant text, check ancestors up to 5 levels
+    if (textContent == null || textContent.isEmpty) {
+      int levels = 0;
+      element.visitAncestorElements((ancestor) {
+        if (++levels > 5) return false;
+        final aText = _findDescendantText(ancestor);
+        if (aText != null && aText.isNotEmpty) {
+          textContent = aText;
+          return false;
+        }
+        return true;
+      });
+    }
 
     // --- Tooltip ---
     final String? tooltipMsg = _findAncestorTooltip(element);
@@ -370,23 +410,43 @@ class SemanticResolver {
   // Key extraction
   // -------------------------------------------------------------------------
 
+  static bool _isCleanUserKey(String key) {
+    if (key.isEmpty) return false;
+    // Discard framework internal markers, runtime hash codes, and generic wrappers
+    if (key.contains('#')) return false;
+    if (key.contains('LabeledGlobalKey')) return false;
+    if (key.contains('GlobalKey')) return false;
+    if (key.contains('GlobalObjectKey')) return false;
+    if (key.contains('UniqueKey')) return false;
+    if (key.contains('<') || key.contains('>')) return false;
+    if (key.startsWith('_')) return false;
+    if (key.startsWith('[') && key.endsWith(']')) return false;
+    return true;
+  }
+
   static String? _extractKey(Key? key) {
     if (key == null) return null;
-    if (key is ValueKey<String>) return key.value;
+    if (key is ValueKey<String>) {
+      return _isCleanUserKey(key.value) ? key.value : null;
+    }
     if (key is ValueKey<int>) return key.value.toString();
     if (key is ObjectKey) {
-      final v = key.value;
-      if (v != null) return v.toString();
+      final v = key.value?.toString();
+      if (v != null && _isCleanUserKey(v)) return v;
       return null;
     }
-    // LabeledGlobalKey / GlobalKey – strip the angle-bracket suffix that
-    // appears in debugLabels like "[<'my_key'>]".
     final raw = key.toString();
-    // ValueKey<dynamic>('value') → extract content between ( and )
+    // ValueKey<dynamic>('value') → extract content between (' and ')
     final paren = RegExp(r"\('(.+?)'\)$").firstMatch(raw);
-    if (paren != null) return paren.group(1);
-    // Fallback: return raw only when it looks meaningful.
-    if (raw.contains("'") || raw.length < 64) return raw;
+    if (paren != null && _isCleanUserKey(paren.group(1)!)) {
+      return paren.group(1);
+    }
+    // [<'my_key'>] -> extract content
+    final angle = RegExp(r"\[<'(.+?)'>\]").firstMatch(raw);
+    if (angle != null && _isCleanUserKey(angle.group(1)!)) {
+      return angle.group(1);
+    }
+    if (_isCleanUserKey(raw)) return raw;
     return null;
   }
 
