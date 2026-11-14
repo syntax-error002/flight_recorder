@@ -55,7 +55,7 @@ class FlightSynthesizer {
     buffer.writeln("import 'package:flutter/material.dart';");
     buffer.writeln("import 'package:flutter_test/flutter_test.dart';");
     buffer.writeln(
-        "import 'package:flutter_flight_recorder/flutter_flight_recorder.dart';");
+        "import 'package:flight_blackbox/flight_blackbox.dart';");
     buffer.writeln();
 
     // ------------------------------------------------------------------

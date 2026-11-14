@@ -123,7 +123,7 @@ abstract final class TestHarnessBuilder {
     final List<String> base = [
       "import 'package:flutter/material.dart';",
       "import 'package:flutter_test/flutter_test.dart';",
-      "import 'package:flutter_flight_recorder/flutter_flight_recorder.dart';",
+      "import 'package:flight_blackbox/flight_blackbox.dart';",
     ];
 
     switch (framework) {

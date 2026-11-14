@@ -1,5 +1,5 @@
 name: example
-description: "Demonstration application for flutter_flight_recorder."
+description: "Demonstration application for flight_blackbox."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  flutter_flight_recorder:
+  flight_blackbox:
     path: ..
 
 dev_dependencies:

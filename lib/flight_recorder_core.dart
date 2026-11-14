@@ -1,4 +1,4 @@
 /// Backward compatibility export.
 library;
 
-export 'flutter_flight_recorder_core.dart';
+export 'flight_blackbox_core.dart';
