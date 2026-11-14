@@ -33,6 +33,8 @@ class FlightSynthesizer {
     String testDescription = 'Reproduced Flight Recorder Session',
     String appWidgetConstructor =
         'const Placeholder() /* Replace with your app root widget e.g. MyApp() */',
+    String? appImport,
+    List<String> extraImports = const [],
   }) {
     final buffer = StringBuffer();
     final manifest = session.manifest;
@@ -56,6 +58,14 @@ class FlightSynthesizer {
     buffer.writeln("import 'package:flutter_test/flutter_test.dart';");
     buffer.writeln(
         "import 'package:flight_blackbox/flight_blackbox.dart';");
+    if (appImport != null && appImport.isNotEmpty) {
+      buffer.writeln("import '$appImport';");
+    }
+    for (final imp in extraImports) {
+      if (imp.isNotEmpty) {
+        buffer.writeln("import '$imp';");
+      }
+    }
     buffer.writeln();
 
     // ------------------------------------------------------------------
@@ -261,25 +271,27 @@ class FlightSynthesizer {
           continue;
         }
 
-        // Check if this is a clean tap: down followed quickly by up at a
-        // similar position.
-        if (event.action == 'down' && i + 1 < events.length) {
-          final next = events[i + 1];
-          if (next is PointerFlightEvent &&
-              next.action == 'up' &&
-              (next.dx - event.dx).abs() < 5 &&
-              (next.dy - event.dy).abs() < 5) {
-            final tapDelta = next.timestampMs - event.timestampMs;
+        // Check if this is a clean tap: down followed by up at a
+        // similar position, even with interleaved navigation/breadcrumb events.
+        if (event.action == 'down') {
+          final upIdx = _findMatchingUpIndex(events, i, event);
+          if (upIdx != -1) {
+            final next = events[upIdx] as PointerFlightEvent;
+            final interleaved = events.sublist(i + 1, upIdx);
             buffer.writeln(
                 '    // Tap at (${event.dx.toStringAsFixed(1)}, ${event.dy.toStringAsFixed(1)})');
             buffer.writeln(
                 '    await tester.tapAt(const Offset(${event.dx.toStringAsFixed(1)}, ${event.dy.toStringAsFixed(1)}));');
-            if (tapDelta > 0) {
-              buffer.writeln(
-                  '    await tester.pump(const Duration(milliseconds: $tapDelta));');
+            for (final ev in interleaved) {
+              if (ev is NavigationFlightEvent) {
+                buffer.writeln("    // [Route] ${ev.action} -> '${ev.routeName}'");
+              } else if (ev is CustomBreadcrumbFlightEvent) {
+                buffer.writeln("    // [Breadcrumb] '${ev.name}' (${ev.category})");
+              }
             }
+            buffer.writeln('    await tester.pumpAndSettle();');
             lastTimestampMs = next.timestampMs;
-            i++; // Skip the up event
+            i = upIdx;
             continue;
           }
         }
@@ -344,6 +356,9 @@ class FlightSynthesizer {
       if (event is NavigationFlightEvent) {
         buffer.writeln(
             "    // [Route] ${event.action} -> '${event.routeName}'");
+        if (event.action == 'push' || event.action == 'pop') {
+          buffer.writeln('    await tester.pumpAndSettle();');
+        }
         continue;
       }
 
@@ -402,21 +417,31 @@ class FlightSynthesizer {
 
     // For a down event that is semantically resolved, look ahead for the
     // matching up event.
-    if (event.action == 'down' && event.hasSemantic && i + 1 < events.length) {
-      final next = events[i + 1];
-      if (next is PointerFlightEvent &&
-          next.action == 'up' &&
-          (next.dx - event.dx).abs() < 5 &&
-          (next.dy - event.dy).abs() < 5) {
+    if (event.action == 'down' && event.hasSemantic) {
+      final upIdx = _findMatchingUpIndex(events, i, event);
+      if (upIdx != -1) {
+        final interleaved = events.sublist(i + 1, upIdx);
         final finder = event.toFinderExpression();
         buffer.writeln('    // Tap: ${_identitySummary(event)}');
-        buffer.writeln('    await tester.tap($finder);');
-        final tapDelta = next.timestampMs - event.timestampMs;
-        if (tapDelta > 0) {
-          buffer.writeln(
-              '    await tester.pump(const Duration(milliseconds: $tapDelta));');
+        buffer.writeln('    try {');
+        buffer.writeln('      await tester.scrollUntilVisible(');
+        buffer.writeln('        $finder,');
+        buffer.writeln('        100.0,');
+        buffer.writeln('        scrollable: find.byType(Scrollable).hitTestable().last,');
+        buffer.writeln('      );');
+        buffer.writeln('    } catch (_) {');
+        buffer.writeln('      try { await tester.scrollUntilVisible($finder, 100.0); } catch (_) {}');
+        buffer.writeln('    }');
+        buffer.writeln('    await tester.tap($finder, warnIfMissed: false);');
+        for (final ev in interleaved) {
+          if (ev is NavigationFlightEvent) {
+            buffer.writeln("    // [Route] ${ev.action} -> '${ev.routeName}'");
+          } else if (ev is CustomBreadcrumbFlightEvent) {
+            buffer.writeln("    // [Breadcrumb] '${ev.name}' (${ev.category})");
+          }
         }
-        onAdvance(i + 1);
+        buffer.writeln('    await tester.pumpAndSettle();');
+        onAdvance(upIdx);
         return;
       }
     }
@@ -426,7 +451,17 @@ class FlightSynthesizer {
     if (event.action == 'tap' && event.hasSemantic) {
       final finder = event.toFinderExpression();
       buffer.writeln('    // Tap: ${_identitySummary(event)}');
-      buffer.writeln('    await tester.tap($finder);');
+      buffer.writeln('    try {');
+      buffer.writeln('      await tester.scrollUntilVisible(');
+      buffer.writeln('        $finder,');
+      buffer.writeln('        100.0,');
+      buffer.writeln('        scrollable: find.byType(Scrollable).hitTestable().last,');
+      buffer.writeln('      );');
+      buffer.writeln('    } catch (_) {');
+      buffer.writeln('      try { await tester.scrollUntilVisible($finder, 100.0); } catch (_) {}');
+      buffer.writeln('    }');
+      buffer.writeln('    await tester.tap($finder, warnIfMissed: false);');
+      buffer.writeln('    await tester.pumpAndSettle();');
       return;
     }
 
@@ -434,28 +469,38 @@ class FlightSynthesizer {
     if (event.action == 'longPress' && event.hasSemantic) {
       final finder = event.toFinderExpression();
       buffer.writeln('    // Long press: ${_identitySummary(event)}');
-      buffer.writeln('    await tester.longPress($finder);');
+      buffer.writeln('    try {');
+      buffer.writeln('      await tester.scrollUntilVisible(');
+      buffer.writeln('        $finder,');
+      buffer.writeln('        100.0,');
+      buffer.writeln('        scrollable: find.byType(Scrollable).hitTestable().last,');
+      buffer.writeln('      );');
+      buffer.writeln('    } catch (_) {');
+      buffer.writeln('      try { await tester.scrollUntilVisible($finder, 100.0); } catch (_) {}');
+      buffer.writeln('    }');
+      buffer.writeln('    await tester.longPress($finder, warnIfMissed: false);');
+      buffer.writeln('    await tester.pumpAndSettle();');
       return;
     }
 
-    // Fallback: use raw tapAt when no semantic info available or action doesn't
-    // match the patterns above.
-    if (event.action == 'down' && i + 1 < events.length) {
-      final next = events[i + 1];
-      if (next is PointerFlightEvent &&
-          next.action == 'up' &&
-          (next.dx - event.dx).abs() < 5 &&
-          (next.dy - event.dy).abs() < 5) {
+    // Fallback: use raw tapAt when no semantic info available.
+    if (event.action == 'down') {
+      final upIdx = _findMatchingUpIndex(events, i, event);
+      if (upIdx != -1) {
+        final interleaved = events.sublist(i + 1, upIdx);
         buffer.writeln(
             '    // Tap at (${event.dx.toStringAsFixed(1)}, ${event.dy.toStringAsFixed(1)})');
         buffer.writeln(
             '    await tester.tapAt(const Offset(${event.dx.toStringAsFixed(1)}, ${event.dy.toStringAsFixed(1)}));');
-        final tapDelta = next.timestampMs - event.timestampMs;
-        if (tapDelta > 0) {
-          buffer.writeln(
-              '    await tester.pump(const Duration(milliseconds: $tapDelta));');
+        for (final ev in interleaved) {
+          if (ev is NavigationFlightEvent) {
+            buffer.writeln("    // [Route] ${ev.action} -> '${ev.routeName}'");
+          } else if (ev is CustomBreadcrumbFlightEvent) {
+            buffer.writeln("    // [Breadcrumb] '${ev.name}' (${ev.category})");
+          }
         }
-        onAdvance(i + 1);
+        buffer.writeln('    await tester.pumpAndSettle();');
+        onAdvance(upIdx);
         return;
       }
     }
@@ -511,6 +556,15 @@ class FlightSynthesizer {
     final escapedText = _escapeDartRawString(event.text);
     buffer.writeln(
         '    // Enter text into ${event.fieldKey ?? event.fieldWidgetType ?? 'TextField'}');
+    buffer.writeln('    try {');
+    buffer.writeln('      await tester.scrollUntilVisible(');
+    buffer.writeln('        $finder,');
+    buffer.writeln('        100.0,');
+    buffer.writeln('        scrollable: find.byType(Scrollable).hitTestable().last,');
+    buffer.writeln('      );');
+    buffer.writeln('    } catch (_) {');
+    buffer.writeln('      try { await tester.scrollUntilVisible($finder, 100.0); } catch (_) {}');
+    buffer.writeln('    }');
     buffer.writeln('    await tester.enterText($finder, $escapedText);');
     buffer.writeln('    await tester.pumpAndSettle();');
   }
@@ -518,6 +572,35 @@ class FlightSynthesizer {
   // -------------------------------------------------------------------------
   // Helpers
   // -------------------------------------------------------------------------
+
+  static int _findMatchingUpIndex(
+    List<FlightEvent> events,
+    int downIndex,
+    PointerFlightEvent downEvent,
+  ) {
+    for (int k = downIndex + 1; k < events.length && k <= downIndex + 15; k++) {
+      final ev = events[k];
+      if (ev is PointerFlightEvent) {
+        if (ev.action == 'down') {
+          return -1;
+        }
+        if (ev.action == 'move') {
+          if ((ev.dx - downEvent.dx).abs() > 15 ||
+              (ev.dy - downEvent.dy).abs() > 15) {
+            return -1;
+          }
+        }
+        if (ev.action == 'up') {
+          if (ev.pointerId == downEvent.pointerId ||
+              ((ev.dx - downEvent.dx).abs() < 15 &&
+                  (ev.dy - downEvent.dy).abs() < 15)) {
+            return k;
+          }
+        }
+      }
+    }
+    return -1;
+  }
 
   static String _identitySummary(SemanticPointerFlightEvent e) {
     if (e.resolvedKey != null) return "key='${e.resolvedKey}'";

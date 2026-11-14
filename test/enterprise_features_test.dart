@@ -46,6 +46,90 @@ void main() {
 
       expect(event.toFinderExpression(), "find.byKey(const Key('checkout_submit_btn'))");
     });
+
+    testWidgets('SemanticResolver resolves IconButton in AppBar and OutlinedButton', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            appBar: AppBar(
+              actions: [
+                IconButton(
+                  key: const Key('nav_to_list_btn'),
+                  icon: const Icon(Icons.list_alt),
+                  onPressed: () {},
+                ),
+              ],
+            ),
+            body: Center(
+              child: OutlinedButton(
+                key: const Key('open_sheet_btn'),
+                onPressed: () {},
+                child: const Text('Open Modal Sheet'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final navFinder = find.byKey(const Key('nav_to_list_btn'));
+      final navCenter = tester.getCenter(navFinder);
+      final navIdentity = SemanticResolver.resolve(navCenter, null);
+      expect(navIdentity?.key, 'nav_to_list_btn');
+      expect(navIdentity?.widgetType, 'IconButton');
+      expect(navIdentity?.isResolvable, isTrue);
+
+      final sheetFinder = find.byKey(const Key('open_sheet_btn'));
+      final sheetCenter = tester.getCenter(sheetFinder);
+      final sheetIdentity = SemanticResolver.resolve(sheetCenter, null);
+      expect(sheetIdentity?.key, 'open_sheet_btn');
+      expect(sheetIdentity?.widgetType, 'OutlinedButton');
+      expect(sheetIdentity?.isResolvable, isTrue);
+    });
+
+    testWidgets('SemanticResolver resolves button inside ModalDialog over background widgets', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned.fill(
+                  child: Center(
+                    child: SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: TextField(
+                        key: const Key('password_input'),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final ctx = tester.element(find.byType(Scaffold));
+      showDialog(
+        context: ctx,
+        builder: (ctx) => AlertDialog(
+          actions: [
+            ElevatedButton(
+              key: const Key('dialog_proceed_btn'),
+              onPressed: () {},
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final proceedFinder = find.byKey(const Key('dialog_proceed_btn'));
+      final proceedCenter = tester.getCenter(proceedFinder);
+
+      final identity = SemanticResolver.resolve(proceedCenter, null);
+      expect(identity?.key, 'dialog_proceed_btn');
+    });
   });
 
   group('Issue 3: Test Harness & DI Scaffolding Generator', () {

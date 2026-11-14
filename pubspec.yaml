@@ -1,6 +1,6 @@
 name: flight_blackbox
 description: Deterministic in-app event-sourcing black box and crash-to-testWidgets synthesizer for Flutter applications.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/syntax-error002/flight_recorder
 issue_tracker: https://github.com/syntax-error002/flight_recorder/issues
 topics:

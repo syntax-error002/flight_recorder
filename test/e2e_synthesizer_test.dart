@@ -61,11 +61,14 @@ Directionality(
 ''',
     );
 
-    final generatedFile = File('test/generated_e2e_repro_test.dart');
+    final tempDir = Directory.systemTemp.createTempSync('flight_e2e_');
+    final generatedFile = File('${tempDir.path}/generated_e2e_repro.dart');
     generatedFile.writeAsStringSync(generatedCode, flush: true);
 
     expect(generatedFile.existsSync(), isTrue);
     expect(generatedFile.lengthSync() > 100, isTrue);
+    expect(generatedCode.contains('void main()'), isTrue);
+    expect(generatedCode.contains('E2E Generated Reproduction Test'), isTrue);
 
     // Save sample flightlog for CLI and developer manual testing
     final fixtureFile = File('test/fixtures/sample.flightlog');

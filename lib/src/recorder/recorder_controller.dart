@@ -256,6 +256,9 @@ class FlightRecorder {
     );
   }
 
+  /// Snapshot convenience alias for [snapshot].
+  FlightSession dumpSession() => snapshot();
+
   /// Builds a [FlightSession] object directly in memory.
   FlightSession snapshot() {
     final view = WidgetsBinding.instance.platformDispatcher.views.firstOrNull;

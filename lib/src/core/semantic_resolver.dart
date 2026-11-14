@@ -213,18 +213,39 @@ class SemanticResolver {
 
     // Collect all candidates that contain the offset.
     final candidates = <_Candidate>[];
-    _collectCandidates(root, offset, candidates, depth: 0);
+    int visitCounter = 0;
+    int lastBarrierVisitIndex = -1;
+
+    _collectCandidates(
+      root,
+      offset,
+      candidates,
+      depth: 0,
+      nextVisitIndex: () => ++visitCounter,
+      onBarrierHit: (barrierIndex) {
+        lastBarrierVisitIndex = barrierIndex;
+      },
+    );
 
     if (candidates.isEmpty) return null;
 
-    // Pick the best candidate: highest score, then deepest depth.
-    candidates.sort((a, b) {
+    // Discard any candidate that was visited before the topmost covering ModalBarrier
+    // (i.e. background widgets occluded by a modal dialog, bottom sheet, or route).
+    final eligibleCandidates = lastBarrierVisitIndex != -1
+        ? candidates.where((c) => c.visitIndex > lastBarrierVisitIndex).toList()
+        : candidates;
+
+    final activeCandidates =
+        eligibleCandidates.isNotEmpty ? eligibleCandidates : candidates;
+
+    // Pick the best candidate: highest score, then highest visitIndex (painted on top).
+    activeCandidates.sort((a, b) {
       final scoreDiff = b.score.compareTo(a.score);
       if (scoreDiff != 0) return scoreDiff;
-      return b.depth.compareTo(a.depth);
+      return b.visitIndex.compareTo(a.visitIndex);
     });
 
-    final best = candidates.first;
+    final best = activeCandidates.first;
     return _extractIdentity(best.element);
   }
 
@@ -237,18 +258,37 @@ class SemanticResolver {
     Offset globalOffset,
     List<_Candidate> out, {
     required int depth,
+    required int Function() nextVisitIndex,
+    required void Function(int barrierIndex) onBarrierHit,
   }) {
+    final vIndex = nextVisitIndex();
     final globalRect = _globalPaintRect(element);
 
-    // Check containment only when we have a valid, non-empty rect.
     if (globalRect != null && globalRect.contains(globalOffset)) {
+      final typeName = element.widget.runtimeType.toString();
+      if (typeName.contains('ModalBarrier')) {
+        onBarrierHit(vIndex);
+      }
+
       final score = _score(element);
-      out.add(_Candidate(element: element, depth: depth, score: score));
+      out.add(_Candidate(
+        element: element,
+        depth: depth,
+        visitIndex: vIndex,
+        score: score,
+      ));
     }
 
     // Always recurse: a child may be positioned outside its parent's clip.
     element.visitChildren((child) {
-      _collectCandidates(child, globalOffset, out, depth: depth + 1);
+      _collectCandidates(
+        child,
+        globalOffset,
+        out,
+        depth: depth + 1,
+        nextVisitIndex: nextVisitIndex,
+        onBarrierHit: onBarrierHit,
+      );
     });
   }
 
@@ -451,11 +491,13 @@ class SemanticResolver {
 class _Candidate {
   final Element element;
   final int depth;
+  final int visitIndex;
   final int score;
 
   const _Candidate({
     required this.element,
     required this.depth,
+    required this.visitIndex,
     required this.score,
   });
 }

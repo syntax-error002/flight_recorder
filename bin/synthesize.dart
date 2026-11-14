@@ -34,6 +34,11 @@ void main(List<String> arguments) async {
       help: 'Decryption passphrase for encrypted .eflightlog files',
     )
     ..addOption(
+      'import',
+      abbr: 'I',
+      help: 'Package or file import for the root widget (e.g. package:my_app/main.dart)',
+    )
+    ..addOption(
       'harness',
       abbr: 'H',
       help: 'Generate a DI test harness scaffold (provider, riverpod, bloc, get_it)',
@@ -60,6 +65,23 @@ void main(List<String> arguments) async {
     final description = results['description'] as String;
     final key = results['key'] as String?;
     final harness = results['harness'] as String?;
+    var appImport = results['import'] as String?;
+
+    if (appImport == null || appImport.isEmpty) {
+      final pubspecFile = File('pubspec.yaml');
+      if (pubspecFile.existsSync()) {
+        try {
+          final content = pubspecFile.readAsStringSync();
+          final match = RegExp(r'^name:\s*([a-zA-Z0-9_]+)', multiLine: true).firstMatch(content);
+          if (match != null) {
+            final pkgName = match.group(1);
+            if (File('lib/main.dart').existsSync()) {
+              appImport = 'package:$pkgName/main.dart';
+            }
+          }
+        } catch (_) {}
+      }
+    }
 
     final inputFile = File(inputPath);
     if (!await inputFile.exists()) {
@@ -92,6 +114,7 @@ void main(List<String> arguments) async {
       session: session,
       testDescription: description,
       appWidgetConstructor: widgetConstructor,
+      appImport: appImport,
     );
 
     final outputFile = File(outputPath);
