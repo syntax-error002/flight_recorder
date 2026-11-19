@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 import '../core/event_models.dart';
 
 typedef OnCrashFlightEvent = void Function(CrashFlightEvent event);
-typedef PlatformErrorCallback = bool Function(Object exception, StackTrace stackTrace);
+typedef PlatformErrorCallback = bool Function(
+    Object exception, StackTrace stackTrace);
 
 /// Intercepts framework-level Flutter errors and root platform dispatch errors.
 class FlightErrorInterceptor {

@@ -197,8 +197,7 @@ class SecureFlightSerializer {
             'readAutoDetect: file "$filePath" is encrypted (.eflightlog) '
             'but no CryptoEngine was provided.');
       }
-      final SecureFlightSerializer ser =
-          SecureFlightSerializer(crypto: crypto);
+      final SecureFlightSerializer ser = SecureFlightSerializer(crypto: crypto);
       return ser.fromEncryptedBytes(bytes);
     }
 
@@ -228,8 +227,7 @@ class SecureFlightSerializer {
               .map((b) => '0x${b.toRadixString(16).padLeft(2, '0')}')
               .join(' ')
           : '<too short>';
-      throw EFlightFormatException(
-          'Invalid .eflightlog magic. Expected '
+      throw EFlightFormatException('Invalid .eflightlog magic. Expected '
           '${_EFLIGHT_MAGIC.map((b) => '0x${b.toRadixString(16).padLeft(2, '0')}').join(' ')}, '
           'got $found.');
     }

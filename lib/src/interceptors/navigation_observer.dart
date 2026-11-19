@@ -25,7 +25,8 @@ class FlightRecorderNavigatorObserver extends NavigatorObserver {
       timestampMs: stopwatch.elapsedMilliseconds,
       action: 'push',
       routeName: _getRouteName(route),
-      previousRouteName: previousRoute != null ? _getRouteName(previousRoute) : null,
+      previousRouteName:
+          previousRoute != null ? _getRouteName(previousRoute) : null,
     ));
   }
 
@@ -36,7 +37,8 @@ class FlightRecorderNavigatorObserver extends NavigatorObserver {
       timestampMs: stopwatch.elapsedMilliseconds,
       action: 'pop',
       routeName: _getRouteName(route),
-      previousRouteName: previousRoute != null ? _getRouteName(previousRoute) : null,
+      previousRouteName:
+          previousRoute != null ? _getRouteName(previousRoute) : null,
     ));
   }
 
@@ -58,7 +60,8 @@ class FlightRecorderNavigatorObserver extends NavigatorObserver {
       timestampMs: stopwatch.elapsedMilliseconds,
       action: 'remove',
       routeName: _getRouteName(route),
-      previousRouteName: previousRoute != null ? _getRouteName(previousRoute) : null,
+      previousRouteName:
+          previousRoute != null ? _getRouteName(previousRoute) : null,
     ));
   }
 }

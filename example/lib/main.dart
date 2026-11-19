@@ -37,14 +37,10 @@ class FlightRecorderDemoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      navigatorObservers: [
-        FlightRecorder.instance.navigatorObserver,
-      ],
+      navigatorObservers: [FlightRecorder.instance.navigatorObserver],
       builder: (context, child) {
         // Wrap entire UI with FlightRecorderOverlay for instant diagnostics
-        return FlightRecorderOverlay(
-          child: child ?? const SizedBox.shrink(),
-        );
+        return FlightRecorderOverlay(child: child ?? const SizedBox.shrink());
       },
       home: const ProductCatalogScreen(),
     );
@@ -77,7 +73,10 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
     });
 
     try {
-      FlightRecorder.instance.addBreadcrumb('API Request Started', category: 'network');
+      FlightRecorder.instance.addBreadcrumb(
+        'API Request Started',
+        category: 'network',
+      );
       final client = HttpClient();
       final request = await client.getUrl(Uri.parse('https://httpbin.org/get'));
       final response = await request.close();
@@ -88,7 +87,10 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
         _isLoading = false;
         _networkStatus = 'HTTP ${response.statusCode} (Length: ${body.length})';
       });
-      FlightRecorder.instance.addBreadcrumb('API Request Succeeded', category: 'network');
+      FlightRecorder.instance.addBreadcrumb(
+        'API Request Succeeded',
+        category: 'network',
+      );
     } catch (e) {
       setState(() {
         _isLoading = false;
@@ -156,7 +158,10 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
                       ),
                       Text(
                         'Tap the red floating button anytime to export .flightlog or synthesize Dart testWidgets!',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade400,
+                        ),
                       ),
                     ],
                   ),
@@ -198,14 +203,19 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 4.0,
+            ),
             child: TextField(
               key: const Key('catalog_search_field'),
               decoration: InputDecoration(
                 hintText: 'Search products (tests IME recording)...',
                 prefixIcon: const Icon(Icons.search),
                 isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onChanged: (val) {
                 FlightRecorder.instance.addBreadcrumb(
@@ -222,9 +232,7 @@ class _ProductCatalogScreenState extends State<ProductCatalogScreen> {
               itemBuilder: (context, index) {
                 final product = _products[index];
                 return ListTile(
-                  leading: CircleAvatar(
-                    child: Text('${index + 1}'),
-                  ),
+                  leading: CircleAvatar(child: Text('${index + 1}')),
                   title: Text(product['name'] as String),
                   subtitle: Text('\$${product['price']}'),
                   trailing: ElevatedButton(
@@ -304,7 +312,10 @@ class CartScreen extends StatelessWidget {
                   );
                   Navigator.pop(context);
                 },
-                child: const Text('Checkout & Pay', style: TextStyle(fontSize: 16)),
+                child: const Text(
+                  'Checkout & Pay',
+                  style: TextStyle(fontSize: 16),
+                ),
               ),
             ),
           ],

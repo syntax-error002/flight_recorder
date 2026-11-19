@@ -52,7 +52,8 @@ void main() {
     final engine = RedactionEngine();
 
     test('Redacts emails and credit cards from strings', () {
-      final text = 'Contact user at john.doe@example.com with card 4111 2222 3333 4444';
+      final text =
+          'Contact user at john.doe@example.com with card 4111 2222 3333 4444';
       final sanitized = engine.sanitizeString(text);
       expect(sanitized.contains('john.doe@example.com'), isFalse);
       expect(sanitized.contains('[EMAIL_REDACTED]'), isTrue);
@@ -96,7 +97,8 @@ void main() {
   });
 
   group('Serialization and Compression Tests', () {
-    test('Serializes and deserializes FlightSession with GZIP compression', () async {
+    test('Serializes and deserializes FlightSession with GZIP compression',
+        () async {
       final manifest = SessionManifest(
         sessionId: 'test_session_1',
         startedAt: DateTime.utc(2026, 11, 14, 12, 0, 0),
@@ -214,8 +216,11 @@ void main() {
       expect(code.contains("testWidgets('Reproduce Login Crash'"), isTrue);
       expect(code.contains('FlightReplayServer'), isTrue);
       expect(code.contains('tester.tapAt(const Offset(150.0, 300.0))'), isTrue);
-      expect(code.contains('tester.view.physicalSize = const Size(800.0, 1600.0)'), isTrue);
-      expect(code.contains('NullPointerException at login_screen.dart:42'), isTrue);
+      expect(
+          code.contains('tester.view.physicalSize = const Size(800.0, 1600.0)'),
+          isTrue);
+      expect(code.contains('NullPointerException at login_screen.dart:42'),
+          isTrue);
     });
   });
 
@@ -235,7 +240,8 @@ void main() {
 
       try {
         final client = HttpClient();
-        final request = await client.getUrl(Uri.parse('https://myapi.com/user/profile'));
+        final request =
+            await client.getUrl(Uri.parse('https://myapi.com/user/profile'));
         final response = await request.close();
         final body = await utf8.decodeStream(response);
 
@@ -249,7 +255,9 @@ void main() {
   });
 
   group('FlightRecorder Controller & Interceptors Integration', () {
-    testWidgets('Records pointer events and breadcrumbs during widget interactions', (tester) async {
+    testWidgets(
+        'Records pointer events and breadcrumbs during widget interactions',
+        (tester) async {
       final recorder = FlightRecorder.instance;
       recorder.start(config: FlightConfig(bufferCapacity: 50));
 
@@ -277,7 +285,8 @@ void main() {
         final events = recorder.getRecentEvents();
         expect(events.isNotEmpty, isTrue);
 
-        final breadcrumbEvents = events.whereType<CustomBreadcrumbFlightEvent>().toList();
+        final breadcrumbEvents =
+            events.whereType<CustomBreadcrumbFlightEvent>().toList();
         expect(breadcrumbEvents.any((b) => b.name == 'App Launched'), isTrue);
         expect(breadcrumbEvents.any((b) => b.name == 'Button Tapped'), isTrue);
 

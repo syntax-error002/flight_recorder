@@ -178,7 +178,8 @@ class HttpFlightEvent extends FlightEvent {
 
 /// App lifecycle and viewport changes.
 class LifecycleFlightEvent extends FlightEvent {
-  final String state; // 'resumed', 'inactive', 'paused', 'detached', 'metricsChanged'
+  final String
+      state; // 'resumed', 'inactive', 'paused', 'detached', 'metricsChanged'
   final double? width;
   final double? height;
   final double? devicePixelRatio;
@@ -327,7 +328,7 @@ class SemanticPointerFlightEvent extends PointerFlightEvent {
     if (resolvedSemLabel != null) {
       return "find.bySemanticsLabel('${_esc(resolvedSemLabel!)}')";
     }
-    if (resolvedType != null) {
+    if (resolvedType != null && !resolvedType!.startsWith('_')) {
       return 'find.byType($resolvedType)';
     }
     final x = (fallbackDx ?? dx).toStringAsFixed(1);
@@ -335,7 +336,12 @@ class SemanticPointerFlightEvent extends PointerFlightEvent {
     return 'const Offset($x, $y)';
   }
 
-  static String _esc(String s) => s.replaceAll("'", r"\'");
+  static String _esc(String s) => s
+      .replaceAll(r'\', r'\\')
+      .replaceAll("'", r"\'")
+      .replaceAll(r'$', r'\$')
+      .replaceAll('\n', r'\n')
+      .replaceAll('\r', r'\r');
 
   const SemanticPointerFlightEvent({
     required super.timestampMs,

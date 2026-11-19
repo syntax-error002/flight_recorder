@@ -28,28 +28,82 @@ import 'dart:typed_data';
 class _Sha256 {
   // Initial hash values H0..H7
   static const List<int> _H = [
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-    0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+    0x6a09e667,
+    0xbb67ae85,
+    0x3c6ef372,
+    0xa54ff53a,
+    0x510e527f,
+    0x9b05688c,
+    0x1f83d9ab,
+    0x5be0cd19,
   ];
 
   // Round constants K0..K63
   static const List<int> _K = [
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
-    0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
-    0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
-    0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
-    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
-    0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
-    0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
-    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+    0x428a2f98,
+    0x71374491,
+    0xb5c0fbcf,
+    0xe9b5dba5,
+    0x3956c25b,
+    0x59f111f1,
+    0x923f82a4,
+    0xab1c5ed5,
+    0xd807aa98,
+    0x12835b01,
+    0x243185be,
+    0x550c7dc3,
+    0x72be5d74,
+    0x80deb1fe,
+    0x9bdc06a7,
+    0xc19bf174,
+    0xe49b69c1,
+    0xefbe4786,
+    0x0fc19dc6,
+    0x240ca1cc,
+    0x2de92c6f,
+    0x4a7484aa,
+    0x5cb0a9dc,
+    0x76f988da,
+    0x983e5152,
+    0xa831c66d,
+    0xb00327c8,
+    0xbf597fc7,
+    0xc6e00bf3,
+    0xd5a79147,
+    0x06ca6351,
+    0x14292967,
+    0x27b70a85,
+    0x2e1b2138,
+    0x4d2c6dfc,
+    0x53380d13,
+    0x650a7354,
+    0x766a0abb,
+    0x81c2c92e,
+    0x92722c85,
+    0xa2bfe8a1,
+    0xa81a664b,
+    0xc24b8b70,
+    0xc76c51a3,
+    0xd192e819,
+    0xd6990624,
+    0xf40e3585,
+    0x106aa070,
+    0x19a4c116,
+    0x1e376c08,
+    0x2748774c,
+    0x34b0bcb5,
+    0x391c0cb3,
+    0x4ed8aa4a,
+    0x5b9cca4f,
+    0x682e6ff3,
+    0x748f82ee,
+    0x78a5636f,
+    0x84c87814,
+    0x8cc70208,
+    0x90befffa,
+    0xa4506ceb,
+    0xbef9a3f7,
+    0xc67178f2,
   ];
 
   /// Computes SHA-256 digest over [data]. Returns 32 bytes.
@@ -87,12 +141,10 @@ class _Sha256 {
         w[t] = block.getUint32(t * 4, Endian.big);
       }
       for (int t = 16; t < 64; t++) {
-        final int s0 = _rotr32(w[t - 15], 7) ^
-            _rotr32(w[t - 15], 18) ^
-            (w[t - 15] >>> 3);
-        final int s1 = _rotr32(w[t - 2], 17) ^
-            _rotr32(w[t - 2], 19) ^
-            (w[t - 2] >>> 10);
+        final int s0 =
+            _rotr32(w[t - 15], 7) ^ _rotr32(w[t - 15], 18) ^ (w[t - 15] >>> 3);
+        final int s1 =
+            _rotr32(w[t - 2], 17) ^ _rotr32(w[t - 2], 19) ^ (w[t - 2] >>> 10);
         w[t] = (_add32(w[t - 16], s0) + w[t - 7] + s1) & 0xffffffff;
       }
 
@@ -100,13 +152,11 @@ class _Sha256 {
       var e = h4, f = h5, g = h6, h = h7;
 
       for (int t = 0; t < 64; t++) {
-        final int s1 =
-            _rotr32(e, 6) ^ _rotr32(e, 11) ^ _rotr32(e, 25);
+        final int s1 = _rotr32(e, 6) ^ _rotr32(e, 11) ^ _rotr32(e, 25);
         final int ch = (e & f) ^ (~e & g);
         final int temp1 =
             _add32(_add32(_add32(_add32(h, s1), ch), _K[t]), w[t]);
-        final int s0 =
-            _rotr32(a, 2) ^ _rotr32(a, 13) ^ _rotr32(a, 22);
+        final int s0 = _rotr32(a, 2) ^ _rotr32(a, 13) ^ _rotr32(a, 22);
         final int maj = (a & b) ^ (a & c) ^ (b & c);
         final int temp2 = _add32(s0, maj);
 
@@ -284,8 +334,7 @@ class _ChaCha20Like {
     int counter = 0;
     while (pos < data.length) {
       final Uint8List block = _block(key, nonce, counter);
-      final int take =
-          (data.length - pos < 64) ? data.length - pos : 64;
+      final int take = (data.length - pos < 64) ? data.length - pos : 64;
       for (int i = 0; i < take; i++) {
         result[pos + i] = data[pos + i] ^ block[i];
       }
@@ -357,8 +406,9 @@ class CryptoEngine {
 
   /// 256-bit symmetric key.
   final Uint8List key;
+  final Uint8List? salt;
 
-  CryptoEngine._(this.key) {
+  CryptoEngine._(this.key, {this.salt}) {
     if (key.length != _keyLength) {
       throw ArgumentError(
           'CryptoEngine: key must be exactly $_keyLength bytes, '
@@ -374,15 +424,26 @@ class CryptoEngine {
   factory CryptoEngine.withKey(Uint8List key) => CryptoEngine._(key);
 
   /// Constructs a [CryptoEngine] derived from [passphrase] using PBKDF2.
-  factory CryptoEngine.withPassphrase(String passphrase, {Uint8List? salt}) {
+  factory CryptoEngine.withPassphrase(String passphrase,
+      {Uint8List? salt, int iterations = 10000}) {
     final effectiveSalt =
         salt ?? Uint8List.fromList(utf8.encode('flight_recorder_salt_v1'));
-    return CryptoEngine._(deriveKey(passphrase, effectiveSalt));
+    return CryptoEngine._(
+        deriveKey(passphrase, effectiveSalt, iterations: iterations),
+        salt: salt != null ? effectiveSalt : null);
+  }
+
+  static Uint8List generateSalt([int length = 16]) => _secureRandom(length);
+
+  factory CryptoEngine.withPassphraseAndRandomSalt(String passphrase,
+      {int iterations = 10000}) {
+    final salt = generateSalt(16);
+    return CryptoEngine._(deriveKey(passphrase, salt, iterations: iterations),
+        salt: salt);
   }
 
   /// Constructs a [CryptoEngine] with a freshly generated random key.
-  factory CryptoEngine.generateKey() =>
-      CryptoEngine._(generateRandomKey());
+  factory CryptoEngine.generateKey() => CryptoEngine._(generateRandomKey());
 
   // -------------------------------------------------------------------------
   // Core encrypt / decrypt
@@ -394,8 +455,7 @@ class CryptoEngine {
     final Uint8List nonce = _secureRandom(_nonceLength);
 
     // 2. Encrypt
-    final Uint8List ciphertext =
-        _ChaCha20Like.xorStream(key, nonce, plaintext);
+    final Uint8List ciphertext = _ChaCha20Like.xorStream(key, nonce, plaintext);
 
     // 3. Compute HMAC over (nonce || ciphertext)
     final Uint8List hmacInput = Uint8List(nonce.length + ciphertext.length);
@@ -404,8 +464,7 @@ class CryptoEngine {
     final Uint8List tag = _HmacSha256.compute(key, hmacInput);
 
     // 4. Assemble output
-    final Uint8List output =
-        Uint8List(_overhead + ciphertext.length);
+    final Uint8List output = Uint8List(_overhead + ciphertext.length);
     output.setRange(0, _nonceLength, nonce);
     output.setRange(_nonceLength, _nonceLength + _tagLength, tag);
     output.setRange(_overhead, output.length, ciphertext);
@@ -449,13 +508,13 @@ class CryptoEngine {
 
   /// Derives a 32-byte key from [passphrase] and [salt] using
   /// PBKDF2-HMAC-SHA256 with 10 000 iterations.
-  static Uint8List deriveKey(String passphrase, Uint8List salt) {
-    final Uint8List passwordBytes =
-        Uint8List.fromList(utf8.encode(passphrase));
+  static Uint8List deriveKey(String passphrase, Uint8List salt,
+      {int iterations = 10000}) {
+    final Uint8List passwordBytes = Uint8List.fromList(utf8.encode(passphrase));
     return _Pbkdf2.derive(
       password: passwordBytes,
       salt: salt,
-      iterations: 10000,
+      iterations: iterations,
       dkLen: _keyLength,
     );
   }

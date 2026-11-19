@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import '../core/event_models.dart';
 import '../core/semantic_resolver.dart';
+import '../ui/flight_overlay.dart';
 
 typedef OnPointerFlightEvent = void Function(PointerFlightEvent event);
 
@@ -32,12 +33,18 @@ class PointerInterceptor {
   /// Stops listening to global pointer events.
   void detach() {
     if (!_isAttached) return;
-    GestureBinding.instance.pointerRouter.removeGlobalRoute(_handlePointerEvent);
+    GestureBinding.instance.pointerRouter
+        .removeGlobalRoute(_handlePointerEvent);
     _isAttached = false;
     _lastRecordedOffset = null;
   }
 
   void _handlePointerEvent(PointerEvent event) {
+    // Drop touches hitting the diagnostic overlay itself to avoid self-recording
+    if (FlightRecorderOverlay.isOverlayPoint(event.position)) {
+      return;
+    }
+
     final nowMs = stopwatch.elapsedMilliseconds;
 
     if (event is PointerDownEvent) {
@@ -48,7 +55,8 @@ class PointerInterceptor {
         _lastRecordedIdentity = null;
       }
 
-      if (_lastRecordedIdentity != null && _lastRecordedIdentity!.isResolvable) {
+      if (_lastRecordedIdentity != null &&
+          _lastRecordedIdentity!.isResolvable) {
         onEvent(SemanticPointerFlightEvent(
           timestampMs: nowMs,
           action: 'down',

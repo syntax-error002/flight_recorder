@@ -114,7 +114,8 @@ class RedactionEngine {
   String redact(String input) => sanitizeString(input);
 
   /// Convenience method for nullable string redaction.
-  String? maybeRedact(String? input) => input == null ? null : sanitizeString(input);
+  String? maybeRedact(String? input) =>
+      input == null ? null : sanitizeString(input);
 
   /// Sanitizes a JSON payload (String or Object).
   String? sanitizeJsonPayload(String? rawPayload) {

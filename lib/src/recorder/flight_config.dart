@@ -22,6 +22,9 @@ class FlightConfig {
   /// Whether to capture HTTP requests via HttpOverrides.
   final bool enableHttpRecording;
 
+  /// Whether to capture WebSocket connections and frames via HttpOverrides.
+  final bool enableWebSocketRecording;
+
   /// Whether to capture unhandled crashes and auto-export session.
   final bool enableCrashRecording;
 
@@ -47,11 +50,13 @@ class FlightConfig {
     this.enableNavigationRecording = true,
     this.enableLifecycleRecording = true,
     this.enableHttpRecording = true,
+    this.enableWebSocketRecording = true,
     this.enableCrashRecording = true,
     this.enableTextInputRecording = true,
     this.enablePlatformChannelRecording = true,
     this.cryptoEngine,
     this.dumpDirectory,
     RedactionEngine? redactionEngine,
-  }) : redactionEngine = redactionEngine ?? RedactionEngine();
+  })  : assert(bufferCapacity > 0, 'bufferCapacity must be greater than zero'),
+        redactionEngine = redactionEngine ?? RedactionEngine();
 }

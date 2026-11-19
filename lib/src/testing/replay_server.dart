@@ -68,31 +68,38 @@ class _ReplayHttpClient implements HttpClient {
   }
 
   @override
-  Future<HttpClientRequest> open(String method, String host, int port, String path) =>
+  Future<HttpClientRequest> open(
+          String method, String host, int port, String path) =>
       openUrl(method, Uri(scheme: 'http', host: host, port: port, path: path));
 
   @override
-  Future<HttpClientRequest> get(String host, int port, String path) => open('GET', host, port, path);
+  Future<HttpClientRequest> get(String host, int port, String path) =>
+      open('GET', host, port, path);
   @override
   Future<HttpClientRequest> getUrl(Uri url) => openUrl('GET', url);
   @override
-  Future<HttpClientRequest> post(String host, int port, String path) => open('POST', host, port, path);
+  Future<HttpClientRequest> post(String host, int port, String path) =>
+      open('POST', host, port, path);
   @override
   Future<HttpClientRequest> postUrl(Uri url) => openUrl('POST', url);
   @override
-  Future<HttpClientRequest> put(String host, int port, String path) => open('PUT', host, port, path);
+  Future<HttpClientRequest> put(String host, int port, String path) =>
+      open('PUT', host, port, path);
   @override
   Future<HttpClientRequest> putUrl(Uri url) => openUrl('PUT', url);
   @override
-  Future<HttpClientRequest> delete(String host, int port, String path) => open('DELETE', host, port, path);
+  Future<HttpClientRequest> delete(String host, int port, String path) =>
+      open('DELETE', host, port, path);
   @override
   Future<HttpClientRequest> deleteUrl(Uri url) => openUrl('DELETE', url);
   @override
-  Future<HttpClientRequest> head(String host, int port, String path) => open('HEAD', host, port, path);
+  Future<HttpClientRequest> head(String host, int port, String path) =>
+      open('HEAD', host, port, path);
   @override
   Future<HttpClientRequest> headUrl(Uri url) => openUrl('HEAD', url);
   @override
-  Future<HttpClientRequest> patch(String host, int port, String path) => open('PATCH', host, port, path);
+  Future<HttpClientRequest> patch(String host, int port, String path) =>
+      open('PATCH', host, port, path);
   @override
   Future<HttpClientRequest> patchUrl(Uri url) => openUrl('PATCH', url);
 
@@ -111,17 +118,27 @@ class _ReplayHttpClient implements HttpClient {
   String? userAgent;
 
   @override
-  void addCredentials(Uri url, String realm, HttpClientCredentials credentials) {}
+  void addCredentials(
+      Uri url, String realm, HttpClientCredentials credentials) {}
   @override
-  void addProxyCredentials(String host, int port, String realm, HttpClientCredentials credentials) {}
+  void addProxyCredentials(
+      String host, int port, String realm, HttpClientCredentials credentials) {}
   @override
-  set authenticate(Future<bool> Function(Uri url, String scheme, String? realm)? f) {}
+  set authenticate(
+      Future<bool> Function(Uri url, String scheme, String? realm)? f) {}
   @override
-  set authenticateProxy(Future<bool> Function(String host, int port, String scheme, String? realm)? f) {}
+  set authenticateProxy(
+      Future<bool> Function(
+              String host, int port, String scheme, String? realm)?
+          f) {}
   @override
-  set badCertificateCallback(bool Function(X509Certificate cert, String host, int port)? callback) {}
+  set badCertificateCallback(
+      bool Function(X509Certificate cert, String host, int port)? callback) {}
   @override
-  set connectionFactory(Future<ConnectionTask<Socket>> Function(Uri url, String? proxyHost, int? proxyPort)? f) {}
+  set connectionFactory(
+      Future<ConnectionTask<Socket>> Function(
+              Uri url, String? proxyHost, int? proxyPort)?
+          f) {}
   @override
   set findProxy(String Function(Uri url)? f) {}
   @override
@@ -203,7 +220,8 @@ class _ReplayHttpClientRequest implements HttpClientRequest {
   void writeln([Object? obj = '']) {}
 }
 
-class _ReplayHttpClientResponse extends Stream<List<int>> implements HttpClientResponse {
+class _ReplayHttpClientResponse extends Stream<List<int>>
+    implements HttpClientResponse {
   final ReplayFixture _fixture;
   late final List<int> _bytes;
 
@@ -250,7 +268,8 @@ class _ReplayHttpClientResponse extends Stream<List<int>> implements HttpClientR
   @override
   bool get persistentConnection => false;
   @override
-  Future<HttpClientResponse> redirect([String? method, Uri? url, bool? followLoops]) =>
+  Future<HttpClientResponse> redirect(
+          [String? method, Uri? url, bool? followLoops]) =>
       throw UnsupportedError('Replay only');
   @override
   List<RedirectInfo> get redirects => [];
@@ -273,10 +292,12 @@ class _MockHttpHeaders implements HttpHeaders {
   void add(String name, Object value, {bool preserveHeaderCase = false}) {
     _headers.putIfAbsent(name.toLowerCase(), () => []).add(value.toString());
   }
+
   @override
   void set(String name, Object value, {bool preserveHeaderCase = false}) {
     _headers[name.toLowerCase()] = [value.toString()];
   }
+
   @override
   void remove(String name, Object value) => _headers.remove(name.toLowerCase());
   @override

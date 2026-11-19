@@ -1,9 +1,9 @@
-import 'dart:async';
-
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/event_models.dart';
 import '../core/redaction_engine.dart';
+import '../core/semantic_resolver.dart';
 
 // ---------------------------------------------------------------------------
 // Public callback type
@@ -13,287 +13,26 @@ import '../core/redaction_engine.dart';
 typedef OnTextInputFlightEvent = void Function(TextInputFlightEvent event);
 
 // ---------------------------------------------------------------------------
-// _InterceptingBinaryMessenger
+// _FlightRecordingControl
 // ---------------------------------------------------------------------------
 
-/// A [BinaryMessenger] decorator that intercepts messages on the
-/// `flutter/textinput` platform channel and delegates everything else
-/// unchanged to the wrapped [_delegate].
-///
-/// **Thread-safety:** All Flutter platform channel work runs on the UI isolate,
-/// so no additional synchronisation is required.
-class _InterceptingBinaryMessenger extends BinaryMessenger {
-  _InterceptingBinaryMessenger({
-    required BinaryMessenger delegate,
-    required _TextInputChannelSpy spy,
-  })  : _delegate = delegate,
-        _spy = spy;
-
-  final BinaryMessenger _delegate;
-  final _TextInputChannelSpy _spy;
-
-  static const String _textInputChannel = 'flutter/textinput';
-
-  // ---- outbound: Dart → platform -------------------------------------------
+class _FlightRecordingControl with TextInputControl {
+  final TextInputInterceptor interceptor;
+  _FlightRecordingControl(this.interceptor);
 
   @override
-  Future<ByteData?>? send(String channel, ByteData? message) {
-    if (channel == _textInputChannel) {
-      _spy.onOutboundMessage(message);
-    }
-    return _delegate.send(channel, message);
+  void attach(TextInputClient client, TextInputConfiguration configuration) {
+    interceptor._handleClientAttached(client, configuration);
   }
-
-  // ---- inbound handler registration ----------------------------------------
 
   @override
-  void setMessageHandler(String channel, MessageHandler? handler) {
-    if (channel == _textInputChannel) {
-      // Store the original handler so the spy can call through.
-      _spy.originalHandler = handler;
-      // Register our intercepting handler instead.
-      _delegate.setMessageHandler(channel, _spy._interceptHandler);
-    } else {
-      _delegate.setMessageHandler(channel, handler);
-    }
+  void setEditingState(TextEditingValue value) {
+    interceptor._handleEditingState(value);
   }
-
-  // ---- pass-through helpers (required by BinaryMessenger contract) ----------
 
   @override
-  Future<void> handlePlatformMessage(
-    String channel,
-    ByteData? data,
-    PlatformMessageResponseCallback? callback,
-  ) {
-    if (channel == _textInputChannel && data != null) {
-      try {
-        final call = const JSONMethodCodec().decodeMethodCall(data);
-        _spy._handleMethodCall(call, fromNative: true);
-      } catch (_) {}
-    }
-    // ignore: deprecated_member_use
-    return _delegate.handlePlatformMessage(channel, data, callback);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// _TextInputChannelSpy
-// ---------------------------------------------------------------------------
-
-/// Internal helper that owns the interception logic for messages arriving on
-/// (or going to) the `flutter/textinput` channel.
-class _TextInputChannelSpy {
-  _TextInputChannelSpy({
-    required OnTextInputFlightEvent onEvent,
-    required Stopwatch stopwatch,
-    required RedactionEngine redaction,
-    required Map<String, String> focusKeyRegistry,
-  })  : _onEvent = onEvent,
-        _stopwatch = stopwatch,
-        _redaction = redaction,
-        _focusKeyRegistry = focusKeyRegistry;
-
-  final OnTextInputFlightEvent _onEvent;
-  final Stopwatch _stopwatch;
-  final RedactionEngine _redaction;
-
-  /// Maps a focus-node hash-code (as a decimal string) to the widget's key
-  /// value string so we can annotate events with a human-readable field key.
-  final Map<String, String> _focusKeyRegistry;
-
-  /// The original inbound handler registered by the Flutter engine / framework.
-  MessageHandler? originalHandler;
-
-  // ---- Outbound (Dart → native) spy ----------------------------------------
-
-  /// Called when Dart sends a message to the platform on the textinput channel.
-  /// We decode the [StandardMethodCodec] envelope and emit an appropriate
-  /// [TextInputFlightEvent].
-  void onOutboundMessage(ByteData? bytes) {
-    if (bytes == null) return;
-
-    try {
-      final call = const JSONMethodCodec().decodeMethodCall(bytes);
-      _handleMethodCall(call, fromNative: false);
-    } catch (_) {
-      // Some messages may be encoded with the binary codec or malformed;
-      // silently skip them so recording never crashes the host app.
-    }
-  }
-
-  // ---- Inbound (native → Dart) intercept handler ---------------------------
-
-  /// Intercepts messages arriving from the platform.  After inspection it
-  /// always calls through to [originalHandler] so the framework continues to
-  /// function correctly.
-  Future<ByteData?> _interceptHandler(ByteData? bytes) async {
-    if (bytes != null) {
-      try {
-        final call = const JSONMethodCodec().decodeMethodCall(bytes);
-        _handleMethodCall(call, fromNative: true);
-      } catch (_) {
-        // See note above.
-      }
-    }
-    return originalHandler?.call(bytes);
-  }
-
-  // ---- Shared decode logic -------------------------------------------------
-
-  void _handleMethodCall(MethodCall call, {required bool fromNative}) {
-    final int ts = _stopwatch.elapsedMilliseconds;
-
-    switch (call.method) {
-      // ----------------------------------------------------------------------
-      // TextInput.setClient – sent by Dart when a TextField gains focus.
-      // Arguments: [clientId (int), inputConfiguration (Map)]
-      // ----------------------------------------------------------------------
-      case 'TextInput.setClient':
-        {
-          final args = call.arguments;
-          if (args is! List || args.length < 2) break;
-
-          final config = args[1] as Map<dynamic, dynamic>?;
-          final inputActionStr = _extractInputAction(config);
-          final clientId = args[0]?.toString() ?? '';
-
-          final fieldKey = _focusKeyRegistry[clientId];
-
-          _emit(TextInputFlightEvent(
-            timestampMs: ts,
-            action: 'setClient',
-            fieldKey: fieldKey,
-            fieldType: _extractFieldType(config),
-            inputAction: inputActionStr,
-          ));
-        }
-
-      // ----------------------------------------------------------------------
-      // TextInput.updateEditingState – sent by platform with updated text.
-      // Arguments: Map with keys: text, selectionBase, selectionExtent, ...
-      // ----------------------------------------------------------------------
-      case 'TextInput.updateEditingState':
-        {
-          final args = _asStringKeyedMap(call.arguments);
-          if (args == null) break;
-
-          final rawText = args['text'] as String? ?? '';
-          final redactedText = _redaction.sanitizeString(rawText);
-          final selBase = args['selectionBase'] as int?;
-          final selExtent = args['selectionExtent'] as int?;
-
-          _emit(TextInputFlightEvent(
-            timestampMs: ts,
-            action: 'updateValue',
-            redactedText: redactedText,
-            selectionBase: selBase,
-            selectionExtent: selExtent,
-          ));
-        }
-
-      // ----------------------------------------------------------------------
-      // TextInput.setEditingState – sent by Dart to update platform state.
-      // Same shape as updateEditingState.
-      // ----------------------------------------------------------------------
-      case 'TextInput.setEditingState':
-        {
-          final args = _asStringKeyedMap(call.arguments);
-          if (args == null) break;
-
-          final rawText = args['text'] as String? ?? '';
-          final redactedText = _redaction.sanitizeString(rawText);
-          final selBase = args['selectionBase'] as int?;
-          final selExtent = args['selectionExtent'] as int?;
-
-          _emit(TextInputFlightEvent(
-            timestampMs: ts,
-            action: 'updateValue',
-            redactedText: redactedText,
-            selectionBase: selBase,
-            selectionExtent: selExtent,
-          ));
-        }
-
-      // ----------------------------------------------------------------------
-      // TextInputClient.performAction – keyboard action button pressed.
-      // Arguments: [clientId, actionString]
-      // ----------------------------------------------------------------------
-      case 'TextInputClient.performAction':
-        {
-          final args = call.arguments;
-          if (args is! List || args.length < 2) break;
-
-          final clientId = args[0]?.toString() ?? '';
-          final actionRaw = args[1] as String? ?? '';
-          // actionRaw is like "TextInputAction.done" – strip the prefix.
-          final inputAction = actionRaw.startsWith('TextInputAction.')
-              ? actionRaw.substring('TextInputAction.'.length)
-              : actionRaw;
-
-          _emit(TextInputFlightEvent(
-            timestampMs: ts,
-            action: 'performAction',
-            fieldKey: _focusKeyRegistry[clientId],
-            inputAction: inputAction,
-          ));
-        }
-
-      // ----------------------------------------------------------------------
-      // TextInput.clearClient – TextField lost focus.
-      // ----------------------------------------------------------------------
-      case 'TextInput.clearClient':
-        _emit(TextInputFlightEvent(
-          timestampMs: ts,
-          action: 'clearClient',
-        ));
-
-      // All other textinput messages (show, hide, requestAutofill, etc.)
-      // are intentionally not recorded – they carry no content of interest.
-      default:
-        break;
-    }
-  }
-
-  // ---- Helpers -------------------------------------------------------------
-
-  void _emit(TextInputFlightEvent event) => _onEvent(event);
-
-  /// Safely converts a [dynamic] value to a `Map<String, dynamic>`.
-  Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
-    if (value is Map) {
-      try {
-        return value.map((k, v) => MapEntry(k.toString(), v));
-      } catch (_) {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  /// Extracts the [TextInputAction] label from the input configuration map.
-  /// The key is 'inputAction' and its value follows the Flutter convention
-  /// "TextInputAction.done".
-  String? _extractInputAction(Map<dynamic, dynamic>? config) {
-    if (config == null) return null;
-    final raw = config['inputAction'] as String?;
-    if (raw == null) return null;
-    return raw.startsWith('TextInputAction.')
-        ? raw.substring('TextInputAction.'.length)
-        : raw;
-  }
-
-  /// Extracts a human-readable widget type hint from the input configuration.
-  /// Flutter encodes the input type as 'TextInputType.text', etc.
-  String? _extractFieldType(Map<dynamic, dynamic>? config) {
-    if (config == null) return null;
-    final typeMap = config['inputType'] as Map?;
-    if (typeMap == null) return null;
-    final name = typeMap['name'] as String?;
-    if (name == null) return null;
-    return name.startsWith('TextInputType.')
-        ? name.substring('TextInputType.'.length)
-        : name;
+  void detach(TextInputClient client) {
+    interceptor._handleClientDetached(client);
   }
 }
 
@@ -301,9 +40,8 @@ class _TextInputChannelSpy {
 // TextInputInterceptor — public API
 // ---------------------------------------------------------------------------
 
-/// Intercepts keyboard / IME events by wrapping the
-/// [ServicesBinding.defaultBinaryMessenger] with a custom [BinaryMessenger]
-/// that observes messages on the `flutter/textinput` platform channel.
+/// Intercepts keyboard / IME events by plugging into Flutter's native
+/// [TextInputControl] mechanism.
 ///
 /// ## Setup
 ///
@@ -321,16 +59,16 @@ class _TextInputChannelSpy {
 ///
 /// ## PII safety
 ///
-/// Raw text is *never* stored.  Every text value passes through [redaction]
+/// Raw text is *never* stored. Every text value passes through [redaction]
 /// before being assigned to [TextInputFlightEvent.redactedText].
 ///
 /// ## Focus registry
 ///
 /// [focusKeyRegistry] maps a focus-node hash-code (as a decimal string) to
-/// the widget's key string.  Callers should populate this map from a
+/// the widget's key string. Callers should populate this map from a
 /// [FocusManager.instance] listener or from the [TextInputInterceptor]'s host
-/// widget.  When no matching entry is found the [TextInputFlightEvent.fieldKey]
-/// is left `null`.
+/// widget. When no matching entry is found the [TextInputFlightEvent.fieldKey]
+/// is resolved semantically via label or widget keys.
 ///
 /// ## Thread-safety
 ///
@@ -349,7 +87,9 @@ class TextInputInterceptor {
     required this.stopwatch,
     required this.redaction,
     required this.focusKeyRegistry,
-  });
+  }) {
+    _control = _FlightRecordingControl(this);
+  }
 
   final OnTextInputFlightEvent onEvent;
   final Stopwatch stopwatch;
@@ -365,77 +105,116 @@ class TextInputInterceptor {
   bool get isAttached => _attached;
 
   bool _attached = false;
-  BinaryMessenger? _originalMessenger;
-  _InterceptingBinaryMessenger? _interceptingMessenger;
+  late final _FlightRecordingControl _control;
+  String? _activeFieldKey;
+  String? _activeFieldType;
+
+  // ---- TextInputControl handlers -------------------------------------------
+
+  void _handleClientAttached(
+      TextInputClient client, TextInputConfiguration configuration) {
+    final int ts = stopwatch.elapsedMilliseconds;
+    String? resolvedKey;
+    try {
+      final focus = FocusManager.instance.primaryFocus;
+      final ctx = focus?.context;
+      ctx?.visitAncestorElements((a) {
+        final w = a.widget;
+        if (w is TextField) {
+          final cleanKey = SemanticResolver.extractKey(w.key);
+          if (cleanKey != null) {
+            resolvedKey = cleanKey;
+          } else if (w.decoration?.labelText?.isNotEmpty == true) {
+            resolvedKey = 'label:${w.decoration!.labelText}';
+          } else if (w.decoration?.hintText?.isNotEmpty == true) {
+            resolvedKey = 'label:${w.decoration!.hintText}';
+          }
+          return false;
+        }
+        return true;
+      });
+    } catch (_) {}
+
+    _activeFieldKey = resolvedKey;
+    _activeFieldType = configuration.inputType.toString();
+
+    onEvent(TextInputFlightEvent(
+      timestampMs: ts,
+      action: 'setClient',
+      fieldKey: _activeFieldKey,
+      fieldType: _activeFieldType,
+      inputAction: configuration.inputAction.name,
+    ));
+  }
+
+  void _handleEditingState(TextEditingValue value) {
+    final int ts = stopwatch.elapsedMilliseconds;
+    final redacted = redaction.sanitizeString(value.text);
+    onEvent(TextInputFlightEvent(
+      timestampMs: ts,
+      action: 'updateValue',
+      fieldKey: _activeFieldKey,
+      fieldType: _activeFieldType,
+      redactedText: redacted,
+      selectionBase: value.selection.baseOffset,
+      selectionExtent: value.selection.extentOffset,
+    ));
+  }
+
+  void _handleClientDetached(TextInputClient client) {
+    final int ts = stopwatch.elapsedMilliseconds;
+    onEvent(TextInputFlightEvent(
+      timestampMs: ts,
+      action: 'clearClient',
+      fieldKey: _activeFieldKey,
+    ));
+    _activeFieldKey = null;
+    _activeFieldType = null;
+  }
 
   // ---- Lifecycle -----------------------------------------------------------
 
-  /// Wraps [ServicesBinding.defaultBinaryMessenger] with the intercepting
-  /// messenger.  Safe to call multiple times – subsequent calls are no-ops.
+  /// Attaches the interceptor to Flutter's text input control mechanism.
   void attach() {
     if (_attached) return;
 
-    _originalMessenger = ServicesBinding.instance.defaultBinaryMessenger;
-
-    final spy = _TextInputChannelSpy(
-      onEvent: onEvent,
-      stopwatch: stopwatch,
-      redaction: redaction,
-      focusKeyRegistry: focusKeyRegistry,
-    );
-
-    _interceptingMessenger = _InterceptingBinaryMessenger(
-      delegate: _originalMessenger!,
-      spy: spy,
-    );
-
-    // Swap defaultBinaryMessenger in test mode if available
     try {
-      (ServicesBinding.instance as dynamic).defaultBinaryMessenger =
-          _interceptingMessenger;
+      TextInput.setInputControl(_control);
     } catch (_) {}
 
-    // In production / engine boundary, tap via ChannelBuffers so native platform
-    // keyboard messages are observed without clobbering existing handlers.
     try {
-      ServicesBinding.instance.channelBuffers.setListener(
-        'flutter/textinput',
-        (ByteData? data, PlatformMessageResponseCallback callback) {
-          if (data != null) {
-            try {
-              final call = const JSONMethodCodec().decodeMethodCall(data);
-              spy._handleMethodCall(call, fromNative: true);
-            } catch (_) {}
-          }
-          // ignore: deprecated_member_use
-          _originalMessenger?.handlePlatformMessage(
-            'flutter/textinput',
-            data,
-            callback,
-          );
-        },
-      );
+      FocusManager.instance.addListener(_handleFocusChange);
     } catch (_) {}
 
     _attached = true;
   }
 
-  /// Restores original message interceptors on the `flutter/textinput` channel.
-  /// Safe to call multiple times – subsequent calls are no-ops.
+  /// Restores the original text input control.
   void detach() {
     if (!_attached) return;
 
     try {
-      (ServicesBinding.instance as dynamic).defaultBinaryMessenger =
-          _originalMessenger;
+      TextInput.restorePlatformInputControl();
     } catch (_) {}
 
     try {
-      ServicesBinding.instance.channelBuffers.clearListener('flutter/textinput');
+      FocusManager.instance.removeListener(_handleFocusChange);
     } catch (_) {}
 
-    _interceptingMessenger = null;
-    _originalMessenger = null;
     _attached = false;
+  }
+
+  void _handleFocusChange() {
+    final focus = FocusManager.instance.primaryFocus;
+    if (focus == null) return;
+    final context = focus.context;
+    if (context == null) return;
+    try {
+      final identity = SemanticResolver.resolve(Offset.zero, context);
+      final key = identity?.key;
+      if (key != null) {
+        focusKeyRegistry[focus.hashCode.toString()] = key;
+      }
+    } catch (_) {}
   }
 }

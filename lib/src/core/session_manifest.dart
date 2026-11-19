@@ -41,7 +41,8 @@ class SessionManifest {
       platform: json['platform'] as String,
       initialWidth: (json['initialWidth'] as num).toDouble(),
       initialHeight: (json['initialHeight'] as num).toDouble(),
-      initialDevicePixelRatio: (json['initialDevicePixelRatio'] as num).toDouble(),
+      initialDevicePixelRatio:
+          (json['initialDevicePixelRatio'] as num).toDouble(),
       appVersion: json['appVersion'] as String?,
       buildNumber: json['buildNumber'] as String?,
       initialRoute: json['initialRoute'] as String?,

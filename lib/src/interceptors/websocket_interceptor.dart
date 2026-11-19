@@ -85,8 +85,7 @@ class WebSocketRawEvent {
   final bool wasPayloadTruncated;
 
   @override
-  String toString() =>
-      'WebSocketRawEvent(id=$id, kind=${kind.name}, url=$url)';
+  String toString() => 'WebSocketRawEvent(id=$id, kind=${kind.name}, url=$url)';
 
   Map<String, Object?> toJson() => {
         'id': id,
@@ -196,7 +195,8 @@ class FlightRecorderWebSocketInterceptor {
         exception: e,
         stack: s,
         library: 'flight_recorder',
-        context: ErrorDescription('in FlightRecorderWebSocketInterceptor.onEvent'),
+        context:
+            ErrorDescription('in FlightRecorderWebSocketInterceptor.onEvent'),
       ));
     }
   }

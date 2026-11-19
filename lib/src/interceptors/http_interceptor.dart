@@ -24,8 +24,8 @@ class FlightRecorderHttpOverrides extends HttpOverrides {
 
   @override
   HttpClient createHttpClient(SecurityContext? context) {
-    final client = delegate?.createHttpClient(context) ??
-        super.createHttpClient(context);
+    final client =
+        delegate?.createHttpClient(context) ?? super.createHttpClient(context);
     return _FlightRecorderHttpClient(client, onEvent, stopwatch, redaction);
   }
 }
@@ -59,8 +59,10 @@ class _FlightRecorderHttpClient implements HttpClient {
   }
 
   @override
-  Future<HttpClientRequest> open(String method, String host, int port, String path) {
-    return openUrl(method, Uri(scheme: 'http', host: host, port: port, path: path));
+  Future<HttpClientRequest> open(
+      String method, String host, int port, String path) {
+    return openUrl(
+        method, Uri(scheme: 'http', host: host, port: port, path: path));
   }
 
   @override
@@ -135,27 +137,38 @@ class _FlightRecorderHttpClient implements HttpClient {
   set userAgent(String? value) => _inner.userAgent = value;
 
   @override
-  void addCredentials(Uri url, String realm, HttpClientCredentials credentials) =>
+  void addCredentials(
+          Uri url, String realm, HttpClientCredentials credentials) =>
       _inner.addCredentials(url, realm, credentials);
 
   @override
-  void addProxyCredentials(String host, int port, String realm, HttpClientCredentials credentials) =>
+  void addProxyCredentials(String host, int port, String realm,
+          HttpClientCredentials credentials) =>
       _inner.addProxyCredentials(host, port, realm, credentials);
 
   @override
-  set authenticate(Future<bool> Function(Uri url, String scheme, String? realm)? f) =>
+  set authenticate(
+          Future<bool> Function(Uri url, String scheme, String? realm)? f) =>
       _inner.authenticate = f;
 
   @override
-  set authenticateProxy(Future<bool> Function(String host, int port, String scheme, String? realm)? f) =>
+  set authenticateProxy(
+          Future<bool> Function(
+                  String host, int port, String scheme, String? realm)?
+              f) =>
       _inner.authenticateProxy = f;
 
   @override
-  set badCertificateCallback(bool Function(X509Certificate cert, String host, int port)? callback) =>
+  set badCertificateCallback(
+          bool Function(X509Certificate cert, String host, int port)?
+              callback) =>
       _inner.badCertificateCallback = callback;
 
   @override
-  set connectionFactory(Future<ConnectionTask<Socket>> Function(Uri url, String? proxyHost, int? proxyPort)? f) =>
+  set connectionFactory(
+          Future<ConnectionTask<Socket>> Function(
+                  Uri url, String? proxyHost, int? proxyPort)?
+              f) =>
       _inner.connectionFactory = f;
 
   @override
@@ -452,7 +465,8 @@ class _FlightRecorderHttpClientResponse extends Stream<List<int>>
   String get reasonPhrase => _inner.reasonPhrase;
 
   @override
-  Future<HttpClientResponse> redirect([String? method, Uri? url, bool? followLoops]) =>
+  Future<HttpClientResponse> redirect(
+          [String? method, Uri? url, bool? followLoops]) =>
       _inner.redirect(method, url, followLoops);
 
   @override

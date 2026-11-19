@@ -14,12 +14,14 @@ export 'src/interceptors/error_interceptor.dart';
 export 'src/interceptors/http_interceptor.dart';
 export 'src/interceptors/lifecycle_observer.dart';
 export 'src/interceptors/navigation_observer.dart';
+export 'src/interceptors/network_observer.dart';
 export 'src/interceptors/platform_channel_interceptor.dart';
 export 'src/interceptors/pointer_interceptor.dart';
 export 'src/interceptors/text_input_interceptor.dart';
 export 'src/interceptors/websocket_interceptor.dart';
 
 export 'src/recorder/flight_config.dart';
+export 'src/recorder/flight_blackbox_entry.dart';
 export 'src/recorder/recorder_controller.dart';
 
 export 'src/serializer/secure_serializer.dart';

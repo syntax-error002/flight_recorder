@@ -10,7 +10,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Issue 1 & 2: Semantic Hit-Test & Robust Finder Synthesis', () {
-    testWidgets('SemanticResolver resolves key and text from widget tree', (tester) async {
+    testWidgets('SemanticResolver resolves key and text from widget tree',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -44,10 +45,13 @@ void main() {
         resolvedType: identity.widgetType,
       );
 
-      expect(event.toFinderExpression(), "find.byKey(const Key('checkout_submit_btn'))");
+      expect(event.toFinderExpression(),
+          "find.byKey(const Key('checkout_submit_btn'))");
     });
 
-    testWidgets('SemanticResolver resolves IconButton in AppBar and OutlinedButton', (tester) async {
+    testWidgets(
+        'SemanticResolver resolves IconButton in AppBar and OutlinedButton',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -86,7 +90,9 @@ void main() {
       expect(sheetIdentity?.isResolvable, isTrue);
     });
 
-    testWidgets('SemanticResolver resolves button inside ModalDialog over background widgets', (tester) async {
+    testWidgets(
+        'SemanticResolver resolves button inside ModalDialog over background widgets',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -148,12 +154,16 @@ dependencies:
       final harnessCode = TestHarnessBuilder.generateHarness(
         framework: detected,
         appWidgetConstructor: 'const MyApp()',
-        detectedChannels: ['plugins.flutter.io/shared_preferences', 'flutter_secure_storage'],
+        detectedChannels: [
+          'plugins.flutter.io/shared_preferences',
+          'flutter_secure_storage'
+        ],
         detectedHttpHosts: ['api.myapp.com'],
       );
 
       expect(harnessCode.contains('ProviderScope'), isTrue);
-      expect(harnessCode.contains('plugins.flutter.io/shared_preferences'), isTrue);
+      expect(harnessCode.contains('plugins.flutter.io/shared_preferences'),
+          isTrue);
       expect(harnessCode.contains('flutter_secure_storage'), isTrue);
       expect(harnessCode.contains('FlightReplayServer'), isTrue);
     });
@@ -165,7 +175,9 @@ dependencies:
   });
 
   group('Issue 4: Platform Channel Interception & Replay Binding', () {
-    test('PlatformChannelReplayBinding stubs native channels avoiding MissingPluginException', () async {
+    test(
+        'PlatformChannelReplayBinding stubs native channels avoiding MissingPluginException',
+        () async {
       const channelName = 'com.myapp.secure_vault';
       const methodName = 'getAuthToken';
 
@@ -214,16 +226,19 @@ dependencies:
       final key = CryptoEngine.generateRandomKey();
       final crypto = CryptoEngine.withKey(key);
 
-      final originalData = Uint8List.fromList(utf8.encode('Sensitive Flight Session Data with Passwords'));
+      final originalData = Uint8List.fromList(
+          utf8.encode('Sensitive Flight Session Data with Passwords'));
       final encrypted = crypto.encrypt(originalData);
 
       expect(encrypted.length > originalData.length, isTrue);
 
       final decrypted = crypto.decrypt(encrypted);
-      expect(utf8.decode(decrypted), 'Sensitive Flight Session Data with Passwords');
+      expect(utf8.decode(decrypted),
+          'Sensitive Flight Session Data with Passwords');
     });
 
-    test('SecureFlightSerializer writes and auto-detects .eflightlog files', () async {
+    test('SecureFlightSerializer writes and auto-detects .eflightlog files',
+        () async {
       final key = CryptoEngine.generateRandomKey();
       final crypto = CryptoEngine.withKey(key);
       final secureSerializer = SecureFlightSerializer(crypto: crypto);
@@ -240,17 +255,21 @@ dependencies:
       final session = FlightSession(
         manifest: manifest,
         events: [
-          const CustomBreadcrumbFlightEvent(timestampMs: 50, name: 'Secret Action'),
+          const CustomBreadcrumbFlightEvent(
+              timestampMs: 50, name: 'Secret Action'),
         ],
       );
 
-      final tempFile = File('${Directory.systemTemp.path}/test_secure_session.eflightlog');
+      final tempFile =
+          File('${Directory.systemTemp.path}/test_secure_session.eflightlog');
       await secureSerializer.writeEncryptedToFile(session, tempFile.path);
 
       expect(await tempFile.exists(), isTrue);
 
       // Read back with auto-detection
-      final restored = await SecureFlightSerializer.readAutoDetect(tempFile.path, crypto: crypto);
+      final restored = await SecureFlightSerializer.readAutoDetect(
+          tempFile.path,
+          crypto: crypto);
       expect(restored.manifest.sessionId, 'encrypted_session_42');
       expect(restored.events.first.toJson()['name'], 'Secret Action');
 
@@ -277,7 +296,13 @@ dependencies:
     test('RouteStackSnapshotEvent serializes and restores deep routes', () {
       const snapshot = RouteStackSnapshotEvent(
         timestampMs: 10,
-        routeStack: ['/', '/home', '/settings', '/security', '/change-password'],
+        routeStack: [
+          '/',
+          '/home',
+          '/settings',
+          '/security',
+          '/change-password'
+        ],
       );
 
       final json = snapshot.toJson();

@@ -36,12 +36,14 @@ void main(List<String> arguments) async {
     ..addOption(
       'import',
       abbr: 'I',
-      help: 'Package or file import for the root widget (e.g. package:my_app/main.dart)',
+      help:
+          'Package or file import for the root widget (e.g. package:my_app/main.dart)',
     )
     ..addOption(
       'harness',
       abbr: 'H',
-      help: 'Generate a DI test harness scaffold (provider, riverpod, bloc, get_it)',
+      help:
+          'Generate a DI test harness scaffold (provider, riverpod, bloc, get_it)',
     )
     ..addFlag(
       'help',
@@ -72,7 +74,8 @@ void main(List<String> arguments) async {
       if (pubspecFile.existsSync()) {
         try {
           final content = pubspecFile.readAsStringSync();
-          final match = RegExp(r'^name:\s*([a-zA-Z0-9_]+)', multiLine: true).firstMatch(content);
+          final match = RegExp(r'^name:\s*([a-zA-Z0-9_]+)', multiLine: true)
+              .firstMatch(content);
           if (match != null) {
             final pkgName = match.group(1);
             if (File('lib/main.dart').existsSync()) {
@@ -159,6 +162,8 @@ void main(List<String> arguments) async {
         appWidgetConstructor: widgetConstructor,
         detectedChannels: detectedChannels,
         detectedHttpHosts: detectedHttpHosts,
+        recordedHttpEvents:
+            session.events.whereType<HttpFlightEvent>().toList(),
       );
       final harnessFile = File('test/flight_harness.dart');
       await harnessFile.parent.create(recursive: true);

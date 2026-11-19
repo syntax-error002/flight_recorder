@@ -44,7 +44,15 @@ class FlightSession {
 /// Serializes and deserializes [FlightSession] data to and from files or bytes.
 class FlightSerializer {
   /// Magic header bytes: 'F', 'L', 'I', 'G', 'H', 'T', 0x01
-  static const List<int> magicHeader = [0x46, 0x4C, 0x49, 0x47, 0x48, 0x54, 0x01];
+  static const List<int> magicHeader = [
+    0x46,
+    0x4C,
+    0x49,
+    0x47,
+    0x48,
+    0x54,
+    0x01
+  ];
 
   /// Serializes session to a JSON string.
   static String toJsonString(FlightSession session, {bool pretty = false}) {

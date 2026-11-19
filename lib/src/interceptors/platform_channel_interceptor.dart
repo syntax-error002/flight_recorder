@@ -395,24 +395,9 @@ class _DecodedResponse {
 /// In test environments [TestDefaultBinaryMessengerBinding] is available; in
 /// production we use the [ChannelBuffers] back-door via [ServicesBinding].
 void _setDefaultBinaryMessenger(BinaryMessenger messenger) {
-  // The public API for swapping the messenger is only exposed in test mode via
-  // TestWidgetsFlutterBinding.  For production / integration use we write to
-  // the internal `_binaryMessenger` field via a supported back-door:
-  //   BinaryMessages.setMockDecodedMessageHandler is gone in newer SDKs.
-  // The only stable seam is to override the getter on ServicesBinding by
-  // subclassing, which we cannot do at runtime.  Instead we rely on the fact
-  // that every MethodChannel holds a reference to its messenger only when
-  // explicitly constructed — and by default they call
-  // `ServicesBinding.instance.defaultBinaryMessenger` on each `invokeMethod`.
-  //
-  // Therefore we patch `ServicesBinding.instance` itself through the
-  // `defaultBinaryMessenger` property which, since Flutter 3.3, is a settable
-  // field on `TestDefaultBinaryMessengerBinding` (test) or is overridden via
-  // `ChannelBuffers` in production.
-  //
-  // Public stable approach: use `ChannelBuffers.instance.setDelegate`.
-  //
-  // Safe no-op or custom wrapper
+  try {
+    (ServicesBinding.instance as dynamic).defaultBinaryMessenger = messenger;
+  } catch (_) {}
 }
 
 // ---------------------------------------------------------------------------
@@ -470,9 +455,8 @@ class PlatformChannelReplayBinding {
       if (event.direction != PlatformChannelDirection.fromNative) continue;
       if (event.errorCode != null) continue; // skip error responses
 
-      stubs
-          .putIfAbsent(event.channel, () => {})
-          .putIfAbsent(event.method, () => _StubEntry(event.result));
+      stubs.putIfAbsent(event.channel, () => {})[event.method] =
+          _StubEntry(event.result);
     }
 
     final effectiveMessenger = messenger ??

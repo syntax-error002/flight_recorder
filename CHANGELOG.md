@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.3.0
+
+### Added
+* `FlightBlackbox.run(app: ...)` helper to initialize error handling, observers, interceptors, and the diagnostic overlay in a single call.
+* `FlightNetworkObserver.record(...)` for recording requests from manual HTTP clients (Dio, Chopper, http) without requiring `HttpOverrides`.
+* WebSocket interceptor support enabled by default in `FlightConfig`.
+* Automatic `tester.takeException()` handling in synthesized tests to capture and report app crashes during replay.
+
+### Fixed
+* Fixed widget resolution failing or misidentifying elements in deep widget trees by increasing `SemanticResolver` traversal depth to 512 and adding bounding-box branch pruning.
+* Fixed keystroke recording by migrating from binary messenger overrides to Flutter's `TextInputControl` API (`TextInput.setInputControl`).
+* Fixed synthesized tests failing on forms with multiple unkeyed fields by disambiguating `TextField` finders via labels, hints, or index.
+* Fixed framework internal keys (`LabeledGlobalKey`, private keys) taking precedence over actual UI elements in candidate scoring.
+* Fixed test runner timeouts caused by `pumpAndSettle()` waiting on continuous animations (shimmers, spinners) by generating a bounded `_safeSettle` helper.
+* Fixed PII redaction bypassing mixed-case headers and uppercase JSON payload keys.
+* Fixed `WidgetIdentity.isResolvable` treating generic widget types (like `Container`) as unique finders.
+* Fixed generated test harnesses emitting empty HTTP stubs instead of real recorded fixtures.
+
+### Changed
+* Improved `FlightRecorderOverlay` dragging and layout to respect screen bounds and safe areas.
+* Excluded interactions with the diagnostic overlay itself from being recorded into user session logs.
+
 ## 0.2.0
 
 ### Features & Improvements
