@@ -291,6 +291,14 @@ class SemanticResolver {
     required void Function(int barrierIndex) onBarrierHit,
   }) {
     if (depth > 512) return;
+
+    // Prune offstage and invisible subtrees (e.g. inactive tabs in IndexedStack)
+    final widget = element.widget;
+    if (widget is Offstage && widget.offstage) return;
+    if (widget is Visibility && !widget.visible) return;
+    final ro = element.renderObject;
+    if (ro is RenderOffstage && ro.offstage) return;
+
     final vIndex = nextVisitIndex();
     final globalRect = _globalPaintRect(element);
 
@@ -605,13 +613,23 @@ class SemanticResolver {
   // Descendant text search
   // -------------------------------------------------------------------------
 
+  static bool _isIconGlyph(String? s) {
+    if (s == null || s.isEmpty) return false;
+    if (s.length == 1) {
+      final code = s.codeUnitAt(0);
+      // Unicode Private Use Area (E000-F8FF) used by MaterialIcons and CupertinoIcons
+      if (code >= 0xE000 && code <= 0xF8FF) return true;
+    }
+    return false;
+  }
+
   static String? _findDescendantText(Element element, [Offset? hitPoint]) {
     // 1. If hitPoint is provided, prioritize any Text descendant whose bounding rect contains hitPoint
     if (hitPoint != null) {
       String? hitText;
       _visitDescendantsUntil(element, (child) {
         final w = child.widget;
-        if (w is Text && (w.data?.isNotEmpty == true)) {
+        if (w is Text && (w.data?.isNotEmpty == true) && !_isIconGlyph(w.data)) {
           final rect = _globalPaintRect(child);
           if (rect != null && rect.contains(hitPoint)) {
             hitText = w.data;
@@ -622,7 +640,7 @@ class SemanticResolver {
           final rect = _globalPaintRect(child);
           if (rect != null && rect.contains(hitPoint)) {
             final plain = w.text.toPlainText();
-            if (plain.isNotEmpty) {
+            if (plain.isNotEmpty && !_isIconGlyph(plain)) {
               hitText = plain;
               return true;
             }
@@ -641,13 +659,13 @@ class SemanticResolver {
         return true; // prune structural subtrees
       }
       final w = child.widget;
-      if (w is Text && (w.data?.isNotEmpty == true)) {
+      if (w is Text && (w.data?.isNotEmpty == true) && !_isIconGlyph(w.data)) {
         found = w.data;
         return true; // stop
       }
       if (w is RichText) {
         final plain = w.text.toPlainText();
-        if (plain.isNotEmpty) {
+        if (plain.isNotEmpty && !_isIconGlyph(plain)) {
           found = plain;
           return true;
         }
