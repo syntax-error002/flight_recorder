@@ -4,6 +4,12 @@
 
 ---
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/syntax-error002/flight_recorder/main/flight_blackbox_demo.gif" width="380" alt="FlightBlackbox Demo" />
+</p>
+
+---
+
 ## The Paradigm Shift
 
 When an app crashes or experiences a race condition in QA or production, developers typically receive a stack trace:
